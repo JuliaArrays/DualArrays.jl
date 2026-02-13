@@ -1,7 +1,7 @@
 name = "DualArrays"
 uuid = "429e4e16-f749-45f3-beec-30742fae38ce"
-authors = ["Sheehan Olver <solver@mac.com>"]
 version = "0.2.0"
+authors = ["Sheehan Olver <solver@mac.com>"]
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
@@ -16,6 +16,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
+ArrayLayouts = "1"
 DiffRules = "1.15.1"
 DifferentialEquations = "7.17.0"
 ForwardDiff = "1.2.2"
