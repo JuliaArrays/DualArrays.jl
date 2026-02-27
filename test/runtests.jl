@@ -81,6 +81,17 @@ using DualArrays: Dual
         @test vcat(x, x) == DualVector([1, 1], [1 2 3;1 2 3])
         @test vcat(x, y) == DualVector([1, 2, 3], [1 2 3;4 5 6;7 8 9])
     end
+
+    @testset "Hessian" begin
+        d = DualVector(
+            DualVector([1, 2], [1 0;0 1]),
+            [1 0;0 1]
+        )
+        f(x) = x[1] * x[2]
+        @test f(d) isa Dual
+        @test f(d).partials isa DualVector
+        @test f(d).partials.jacobian == [0 1; 1 0]
+    end
     
     include("broadcast_test.jl")
 end

@@ -77,6 +77,16 @@ for (_, f, n) in DiffRules.diffrules(filter_modules=(:Base,))
             jac = $p1.(x.value, y.value) .* x.jacobian .+ $p2.(x.value, y.value) .* y.jacobian
             return DualVector(val, jac)
         end
+        @eval function broadcasted(::typeof($f), x::Dual, y::AbstractVector)
+            val = $f.(x.value, y)
+            jac = $p1.(x.value, y) .* transpose(x.partials)
+            return DualVector(val, jac)
+        end
+        @eval function broadcasted(::typeof($f), x::AbstractVector, y::Dual)
+            val = $f.(x, y.value)
+            jac = $p2.(x, y.value) .* transpose(y.partials)
+            return DualVector(val, jac)
+        end
         # Must have Base.$f in order not to import everything
         @eval Base.$f(x::Dual, y::Dual) = Dual($f(x.value, y.value), $p1(x.value, y.value) * x.partials + $p2(x.value, y.value) * y.partials)
         @eval Base.$f(x::Dual, y::Real) = Dual($f(x.value, y), $p1(x.value, y) * x.partials)

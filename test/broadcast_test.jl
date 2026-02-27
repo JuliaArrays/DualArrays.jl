@@ -71,4 +71,25 @@ using DualArrays, Test, SparseArrays, LinearAlgebra
     @test s.jacobian ≈ [0.0 -2.0 -3.0; -1.0 -1.0 -3.0; -1.0 -2.0 -2.0]
     @test m.jacobian ≈ [3.0 2.0 3.0; 2.0 6.0 6.0; 3.0 6.0 11.0]
     @test div.jacobian ≈ [0.25 -0.5 -0.75; -0.5 -0.5 -1.5; -0.75 -1.5 -1.75]
+
+    # Broadcasting between Dual and AbstractVector
+    a = x .+ [1.0, 2.0, 3.0]
+    s = [1.0, 2.0, 3.0] .- x
+    m = x .* [1.0, 2.0, 3.0]
+    div = [1.0, 2.0, 3.0] ./ x
+
+    @test a isa DualVector
+    @test s isa DualVector
+    @test m isa DualVector
+    @test div isa DualVector
+
+    @test a.value ≈ [3.0, 4.0, 5.0]
+    @test s.value ≈ [-1.0, 0.0, 1.0]
+    @test m.value ≈ [2.0, 4.0, 6.0]
+    @test div.value ≈ [0.5, 1.0, 1.5]
+
+    @test a.jacobian ≈ [1.0 2.0 3.0; 1.0 2.0 3.0; 1.0 2.0 3.0]
+    @test s.jacobian ≈ [-1.0 -2.0 -3.0; -1.0 -2.0 -3.0; -1.0 -2.0 -3.0]
+    @test m.jacobian ≈ [1.0 2.0 3.0; 2.0 4.0 6.0; 3.0 6.0 9.0]
+    @test div.jacobian ≈ [-0.25 -0.5 -0.75; -0.5 -1.0 -1.5; -0.75 -1.5 -2.25]
 end

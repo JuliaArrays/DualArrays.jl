@@ -8,12 +8,8 @@ ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
 BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
 DiffRules = "b552c78f-8df3-52c6-915a-8e097449b14b"
 FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
-ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-ProfileView = "c46f51b8-102a-5cf2-8d2c-8597cb0e0da7"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
-StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 DiffRules = "1.15.1"
@@ -21,9 +17,7 @@ DifferentialEquations = "7.17.0"
 ForwardDiff = "1.2.2"
 Lux = "1.29.1"
 Plots = "1.41.1"
-ProfileView = "1.10.2"
 SparseArrays = "1.10"
-StaticArrays = "1.9.16"
 
 [extras]
 BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
@@ -31,11 +25,9 @@ DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 Lux = "b2108857-7c20-44ae-9111-449ecde12c47"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-dev = ["Revise"]
 examples = ["Plots", "DifferentialEquations", "ForwardDiff", "BandedMatrices", "Lux"]
 test = ["Test", "ForwardDiff", "BandedMatrices", "SparseArrays"]

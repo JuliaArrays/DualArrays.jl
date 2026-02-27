@@ -49,8 +49,13 @@ end
 """
 Custom display method for DualVectors.
 """
-Base.show(io::IO, ::MIME"text/plain", x::DualVector) = 
-    (print(io, x.value); print(io, " + "); print(io, x.jacobian); print(io, "𝛜"))
+show_dual_vector(io::IO, x::AbstractArray, ::Any) = print(io, x)
+function show_dual_vector(io::IO, x::DualVector, i = 0)
+    show_dual_vector(io, x.value, i+1)
+    print(io, " + $(x.jacobian)ϵ" * repeat('\'', i))
+end
+Base.show(io::IO, x::DualVector) = show_dual_vector(io, x)
+Base.show(io::IO, ::MIME"text/plain", x::DualVector) = Base.show(io, x)
 
 """
 Utility function to compute the jacobian of a function `f` at point `x`.
