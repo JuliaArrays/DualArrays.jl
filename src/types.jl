@@ -14,6 +14,11 @@ struct Dual{T, Partials <: AbstractVector{T}} <: Real
     partials::Partials
 end
 
+Dual{T}(value, partials) where T = Dual(convert(T, value), convert(AbstractVector{T}, partials))
+Dual(value::T, partials::AbstractVector{V}) where {T,V} = Dual{promote_type(T,V)}(value, partials)
+
+one(d::Dual) = Dual(one(d.value), zero(d.partials))
+
 """
     DualVector{T, M <: AbstractMatrix{T}} <: AbstractVector{Dual{T}}
 
