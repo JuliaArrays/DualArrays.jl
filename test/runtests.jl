@@ -1,14 +1,25 @@
 using DualArrays, Test, LinearAlgebra, ForwardDiff, BandedMatrices
-using DualArrays: Dual
+using DualArrays: ArrayOperator
 
 @testset "DualArrays" begin
     
     @testset "Type Definition" begin
         @test_throws ArgumentError DualVector([1,2],I(3))
+        @test Dual(1.0, [1, 2, 3]).partials == [1.0, 2.0, 3.0]
     end
     
     @testset "Indexing" begin
-        v = DualVector([1, 2, 3], [1 2 3; 4 5 6;7 8 9])
+        v = DualVector([1., 2, 3], [1 2 3; 4 5 6;7 8 9])
+        m = DualMatrix([1 2;3 4], zeros(2, 2, 2))
+
+        @test size(v) == (3,)
+        @test axes(v) == (Base.OneTo(3),)
+
+        @test size(m) == (2, 2)
+        @test axes(m) == (Base.OneTo(2), Base.OneTo(2))
+
+        @test m[1, 1] == Dual(1, [0, 0])
+
         @test v[1] isa Dual
         @test v[1] == Dual(1,[1,2,3])
         @test v[2] == Dual(2,[4,5,6])
@@ -22,9 +33,15 @@ using DualArrays: Dual
 
         n = 10
         v = DualVector(1:n, I(n))
-        @test v[2:end].jacobian isa BandedMatrix
+        @test v[2:end].jacobian.data isa BandedMatrix
 
         @test sum(v[1:end-1] .* v[2:end]).partials == ForwardDiff.gradient(v -> sum(v[1:end-1] .* v[2:end]), 1:n)
+    end
+
+    @testset "Indexing (DualMatrix)" begin
+        M = DualMatrix([1 2; 3 4], zeros(2, 2, 2, 2))
+        @test M[1, 1] == Dual(1, [0, 0, 0, 0])
+        @test M[1, :] == DualVector([1, 2], zeros(2, 4))
     end
     
     @testset "Arithmetic (DualVector)" begin
@@ -86,7 +103,36 @@ using DualArrays: Dual
         @test vcat(x) == DualVector([1], [1 2 3])
         @test vcat(x, x) == DualVector([1, 1], [1 2 3;1 2 3])
         @test vcat(x, y) == DualVector([1, 2, 3], [1 2 3;4 5 6;7 8 9])
+
+        z = DualVector([2, 3], [1 0; 0 1])
+        @test vcat(1, z).jacobian.data == [0 0; 1 0; 0 1]
+        @test vcat(z, 1).jacobian.data == [1 0; 0 1; 0 0]
+    end
+
+    @testset "show" begin
+        d = DualVector([1.0, 2.0], [1 0; 0 1])
+        s = repr(MIME"text/plain"(), d)
+        @test occursin(" + ", s)
+        @test endswith(s, "𝛜")
+    end
+
+    @testset "Nested Dual Numbers" begin
+        # Example of finding Hessian of f(x) = x[1]*x[2]
+        # Through nested dual numbers
+        d = DualVector([1, 2], sparse(I, 2, 2))
+        D = DualMatrix(sparse(I, 2, 2), zeros(2, 2, 2, 1))
+        d2 = DualVector(d, D)
+        val = d2[1] * d2[2]
+        @test val isa Dual
+        @test val.value isa Dual
+        @test val.partials isa DualVector
+
+        @test val.value.value == 2 # f(x)
+        @test val.value.partials == [2, 1] # ∇f(x)
+        @test val.partials.value == [2, 1] # ∇f(x)
+        @test val.partials.jacobian == [0 1; 1 0] # Hessian of f(x)
     end
     
     include("broadcast_test.jl")
+    include("array_operator_test.jl")
 end

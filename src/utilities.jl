@@ -10,8 +10,8 @@ end
 
 # Helper functions for vcat operations
 _jacobian(d::Dual) = permutedims(d.partials)
-_jacobian(d::DualVector) = d.jacobian
-_jacobian(d::DualVector, ::Int) = d.jacobian
+_jacobian(d::DualVector) = d.jacobian.data
+_jacobian(d::DualVector, ::Int) = d.jacobian.data
 _jacobian(x::Number, N::Int) = Zeros(typeof(x), 1, N)
 
 _value(v::AbstractVector) = v
@@ -49,7 +49,7 @@ end
 """
 Custom display method for DualVectors.
 """
-Base.show(io::IO, ::MIME"text/plain", x::DualVector) = 
+show(io::IO, ::MIME"text/plain", x::DualArray) = 
     (print(io, x.value); print(io, " + "); print(io, x.jacobian); print(io, "𝛜"))
 
 """

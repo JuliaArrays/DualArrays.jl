@@ -1,7 +1,7 @@
 name = "DualArrays"
 uuid = "429e4e16-f749-45f3-beec-30742fae38ce"
-authors = ["Sheehan Olver <solver@mac.com>"]
 version = "0.2.0"
+authors = ["Sheehan Olver <solver@mac.com>"]
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
@@ -10,6 +10,7 @@ DiffRules = "b552c78f-8df3-52c6-915a-8e097449b14b"
 FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 
 [compat]
 DiffRules = "1.15.1"
@@ -17,6 +18,7 @@ ForwardDiff = "1.2.2"
 Lux = "1.29.1"
 Plots = "1.41.1"
 SparseArrays = "1.10"
+TensorOperations = "5.5.2"
 
 [extras]
 BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
