@@ -14,6 +14,7 @@ TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 
 [compat]
 DiffRules = "1.15.1"
+FillArrays = "1"
 ForwardDiff = "1.2.2"
 Lux = "1.29.1"
 Plots = "1.41.1"
