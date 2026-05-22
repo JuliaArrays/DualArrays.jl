@@ -4,8 +4,6 @@ using ArrayLayouts, FillArrays, LinearAlgebra, SparseArrays
 
 
 sparse_getindex(a...) = layout_getindex(a...)
-
-# TODO: should we move these?
 sparse_getindex(D::Diagonal, k::Integer, ::Colon) = OneElement(D.diag[k], k, size(D, 2))
 sparse_getindex(D::Diagonal, ::Colon, j::Integer) = OneElement(D.diag[j], j, size(D, 1))
 sparse_getindex(d::DualArray, args...) = d[args...]
@@ -49,16 +47,13 @@ getindex(t::ArrayOperator, i::Vararg{Int}) = getindex(t.data, i...)
 # Indexing with only slices/ranges returns a similar tensor
 getindex(t::ArrayOperator{N, M}, i::Vararg{Union{Colon, UnitRange}}) where {N, M} = ArrayOperator{N}(sparse_getindex(t.data, i...))
 
-"""
-Extract a single Dual number from a DualArray.
-"""
+
+# Extract a single Dual number from a DualArray.
 function getindex(x::DualArray, args::Vararg{Int})
     Dual(x.value[args...], x.jacobian[args, :])
 end
 
-"""
-Extract a sub-DualVector from a DualVector using a range.
-"""
+# Extract a sub-DualVector from a DualVector using a range.
 function getindex(x::DualVector, y::UnitRange)
     newval = x.value[y]
     newjac = x.jacobian[y, :]

@@ -1,8 +1,7 @@
 # Miscellaneous functions for DualArrays.jl
 using FillArrays, BandedMatrices, LinearAlgebra
-"""
-Sum all elements of a DualVector, returning a single Dual number.
-"""
+
+# Sum all elements of a DualVector, returning a single Dual number.
 function Base.sum(x::DualVector)
     n = length(x.value)
     Dual(sum(x.value), vec(sum(x.jacobian; dims=1)))
@@ -20,19 +19,16 @@ _value(x::Number) = x
 _size(x::Real) = 1
 _size(x::DualVector) = size(x.jacobian.data, 2)
 
-"""
-Vertically concatenate Dual numbers and DualVectors.
-"""
+
+# Vertically concatenate Dual numbers and DualVectors.
 function Base.vcat(x::Union{Dual, DualVector}...)
     value = vcat((d.value for d in x)...)
     jacobian = vcat((_jacobian(d) for d in x)...)
     DualVector(value, jacobian)
 end
 
-"""
-Vertically concatenate Real numbers and DualVectors.
-"""
 
+# Vertically concatenate Real numbers and DualVectors.
 function Base.vcat(x::Union{Real, DualVector}...)
     # Avoid stack overflow
     if all(i -> i isa Real, x)
@@ -44,17 +40,16 @@ function Base.vcat(x::Union{Real, DualVector}...)
     DualVector(val, jac)
 end
 
-"""
-Custom display method for DualVectors.
-"""
+
+# Custom display method for DualVectors.
 show(io::IO, ::MIME"text/plain", x::DualArray) = 
     (show(io, x.value); print(io, " + "); show(io, x.jacobian); print(io, "𝛜"))
 
 show(io::IO, x::DualArray) = show(io, MIME"text/plain"(), x)
 
 """
+    jacobian(f::Function, x::AbstractVector, id=Eye)
 Utility function to compute the jacobian of a function `f` at point `x`.
-Analogous to `ForwardDiff.jacobian`.
 
 `id` selects the type of (sparse) identity to use and must be either `Eye` (default) or `BandedMatrix`.
 """

@@ -7,6 +7,8 @@ This package provides:
 - `Dual`: A dual number type for storing values and their derivatives
 - `DualVector`: A vector of dual numbers represented with a Jacobian matrix
 - `DualMatrix`: A matrix of dual numbers represented with a Jacobian tensor`
+- `ArrayOperator`: A data structure that stores an array equipped with an output and input dimension.
+    Useful for tensor computations involving higher order DualArrays
 Differentiation rules are mostly provided by ChainRules.jl.
 """
 module DualArrays

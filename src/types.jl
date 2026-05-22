@@ -1,6 +1,8 @@
 # Core type definitions for DualArrays.jl
 
 """
+    ArrayOperator{N, M, T, L}
+
 This type represents a linear map from an M-array to an N-array, with a N+M=L-dimensional
 array as its underlying data. This can be thought of analogously to an L-tensor equipped
 with a contraction pattern characterised by (N, M). Specifically, the tensor has dimensions
@@ -54,27 +56,28 @@ sum(t::ArrayOperator; kwargs...) = sum(t.data; kwargs...)
 ==(a::ArrayOperator{N, M}, b::ArrayOperator{N, M}) where {N, M} = a.data == b.data
 isapprox(a::ArrayOperator{N, M}, b::ArrayOperator{N, M}; kwargs...) where {N, M} = isapprox(a.data, b.data; kwargs...)
 
-# --------------------
-# Broadcasting with ArrayOperators
-# --------------------
-#
-# We want broadcasting on ArrayOperators to behave 
-# as it would on the underlying array, but preserving the
-# ArrayOperator{N, M, T, L} type with the correct type parameters.
-# T and L are preserved or inferred from type promotion.
-# When the highest order is an ArrayOperator, N and M of that
-# ArrayOperator are preserved. We do not support binary broadcasts
-# for cases where:
-#
-# 1. The highest order is not an ArrayOperator
-# 2. We have an (N, M) ArrayOperator and an (N2, M2) ArrayOperator
-#    with N + M = N2 + M2 but (N, M) != (N2, M2).
-#
-# As inferring N and M of the resulting ArrayOperator is ambiguous.
+"""
+We want broadcasting on ArrayOperators to behave
+as it would on the underlying array, but preserving the
+ArrayOperator{N, M, T, L} type with the correct type parameters.
 
-# We define a custom broadcast style.
-# We inherit from the L-array broadcast style and require output dimension N
-# as extra information.
+T and L are preserved or inferred from type promotion.
+
+When the highest order is an ArrayOperator, N and M of that
+ArrayOperator are preserved. We do not support binary broadcasts
+for cases where:
+
+1. The highest order is not an ArrayOperator
+2. We have an (N, M) ArrayOperator and an (N2, M2) ArrayOperator
+    with N + M = N2 + M2 but (N, M) != (N2, M2).
+
+As inferring N and M of the resulting ArrayOperator is ambiguous.
+
+We define a custom broadcast style.
+
+We inherit from the L-array broadcast style and require output dimension N
+as extra information.
+"""
 struct ArrayOperatorBroadcastStyle{L, N} <: Broadcast.AbstractArrayStyle{L} end
 
 Base.BroadcastStyle(::Type{<:ArrayOperator{N, <:Any, <:Any, L}}) where {L, N} = ArrayOperatorBroadcastStyle{L, N}()
@@ -135,6 +138,19 @@ A dual number type that stores a value and its partials (derivatives).
 # Fields
 - `value::T`: The primal value
 - `partials::Partials`: The partial derivatives stored as an array
+
+# Constructors
+    Dual(value::T, partials::AbstractArray{S}) where {S, T}
+
+Lets us construct a Dual number with a value and an array of partials.
+The partials are currently stored as an array due to a technicality in
+the way that Julia differentiates scalars and 0-arrays, meaning that
+having the partials as an ArrayOperator{0} would be incorrect.
+
+    Dual(value::T, partials::ArrayOperator{0, M, S, L}) where {L, S, M, T}
+    Dual(value::T, partials::ArrayOperator{N, 0, S, L}) where {L, S, N, T}
+
+We nevertheless allow construction of a Dual using an ArrayOperator to ensure interoperability.
 """
 struct Dual{T, Partials <: AbstractArray{T}} <: Real
     value::T
@@ -160,22 +176,31 @@ Dual(value::T, partials::ArrayOperator{N, 0, S, L}) where {L, S, N, T} = Dual(va
 
 
 """
-    DualVector{T, M <: AbstractMatrix{T}} <: AbstractVector{Dual{T}}
+    DualArray{T, N, A <: AbstractArray{T,N}} <: AbstractArray{Dual{T}, N}
 
 Represents a vector of dual numbers given by:
     
-    values + jacobian * [ε₁, …, εₙ]
+    values + jacobian * ϵ
 
-For now the entries just return the values when indexed.
+Where value is an N-array of the primals, ϵ is an
+M-array of dual parts and the jacobian is an N+M array of coefficients
+such that right multiplication with ϵ gives a Dual N-array.
 
 # Fields
-- `value::Vector{T}`: The primal values
-- `jacobian::M`: The Jacobian matrix containing partial derivatives
+- `value::AbstractArray{T,N}`: The primal values
+- `jacobian::ArrayOperator{N, M, T, L}`: The Jacobian tensor containing partial derivatives
 
-# Constructor
-    DualVector(value::Vector{T}, jacobian::M) where {T, M <: AbstractMatrix{T}}
+# Constructors
+    DualArray(value::AbstractArray, jacobian::ArrayOperator)
 
-Constructs a DualVector, ensuring that the vector length matches the number of rows in the Jacobian.
+Creates a DualArray with the given value and Jacobian, ensuring that the Jacobian
+has a suitable shape and output dimensions (i.e that the jacobian when multiplying ϵ
+returns an N-array of the correct shape).
+
+    DualArray(value::AbstractArray{S, M}, jacobian::AbstractArray{T, N}) where {S, T, N, M}
+
+We can also, given the jacobian as an AbstractArray, can infer a suitable input and output order
+from the value array.
 """
 struct DualArray{T, N, A <: AbstractArray{T,N}, J <: (ArrayOperator{N, M, T, L} where {L, M})} <: AbstractArray{Dual{T}, N}
     value::A
@@ -194,9 +219,8 @@ DualArray{T,N}(value::A, jacobian::J) where {T, N, A <: AbstractArray{T,N}, J <:
 
 DualArray{T,N}(value, jacobian) where {T, N} = DualArray{T,N}(elconvert(T, value), elconvert(T, jacobian))
 
-"""
-Constructor that forces type compatibility
-"""
+
+# Constructor that forces type compatibility
 function DualArray(value::AbstractArray, jacobian::ArrayOperator)
     T = promote_type(eltype(value), eltype(jacobian))
     DualArray{T}(value, jacobian)
@@ -207,7 +231,17 @@ function DualArray(value::AbstractArray{S, M}, jacobian::AbstractArray{T, N}) wh
     DualArray(value, ArrayOperator{M}(jacobian))
 end
 
+"""
+    DualVector{T}
+
+It is often convenient to work with this alias for a Dual 1-array.
+"""
 const DualVector = DualArray{T, 1} where {T}
+"""
+    DualVector{T}
+
+It is often convenient to work with this alias for a Dual 2-array.
+"""
 const DualMatrix = DualArray{T, 2} where {T}
 
 function DualVector(value::AbstractArray, jacobian::ArrayOperator)
