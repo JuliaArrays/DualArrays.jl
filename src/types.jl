@@ -24,8 +24,8 @@ a + Jϵ
 Where a is an N-array of real numbers, J is an N+M=tensor and ϵ is an M-array of dual parts.
 In the simplest case, where N = 0, we have a Dual number with dual parts arranged in an M-array.
 """
-struct ArrayOperator{N, M, T, L}
-    data::AbstractArray{T, L}
+struct ArrayOperator{N, M, T, DATA <: AbstractArray{T, L}, L}
+    data::DATA
 end
 
 # Constructor to wrap an array with a tensor, given a contraction rule represented by N
