@@ -2,9 +2,9 @@
 using FillArrays, BandedMatrices, LinearAlgebra
 
 # Sum all elements of a DualVector, returning a single Dual number.
+# We use dot as it provides a clean way of summing over nested dual vectors as well.
 function Base.sum(x::DualVector)
-    n = length(x.value)
-    Dual(sum(x.value), vec(sum(x.jacobian; dims=1)))
+    dot(ones(Int, length(x)), x)
 end
 
 # Helper functions for vcat operations
@@ -62,5 +62,14 @@ function jacobian(f::Function, x::AbstractVector, id=Eye)
         Matrix(I(length(x)))
     end
     d = DualVector(x, J)
-    return f(d).jacobian
+    return f(d).jacobian.data
+end
+
+function hessian(f::Function, x::AbstractVector)
+    n = length(x)
+    d1 = DualVector(x, I(n))
+    d2 = DualMatrix(I(n), zeros(n, n, n))
+    d = DualVector(d1, d2)
+    ret = f(d)
+    return ret.partials.jacobian.data
 end

@@ -42,14 +42,14 @@
 #
 # We now implement an example using f(x) = x[1] * x[2] below.
 
-using DualArrays
+using DualArrays, SparseArrayKit
 f(x) = x[1] * x[2]
 
 # a + Bϵ
 x = DualVector([2, 3], [1 0; 0 1])
 
 # C + Dϵ
-y = DualMatrix([1 0;0 1], zeros(2,2,2))
+y = DualMatrix([1 0;0 1], SparseArray{Float64, 3}(undef, (2, 2, 2)))
 
 # Setup the nested dual vector (a + Bϵ) + (C + Dϵ)ϵ'
 z = DualVector(x, y)

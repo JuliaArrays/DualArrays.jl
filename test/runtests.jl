@@ -148,6 +148,17 @@ using DualArrays: ArrayOperator
         @test d2[1].value == Dual(2, [1, 0])
         @test d2[1].partials == DualVector([1.0, 0], zeros(2, 2))
     end
+
+    @testset "Hessian" begin
+        M = [1 1; 1 1]
+        dm = DualMatrix([1 2;3 4], zeros(2, 2, 2))
+
+        @test transpose(dm) isa DualMatrix
+        @test transpose(dm) * [2, -1] == DualVector([-1, 0], zeros(2, 2))
+
+        f(x) = sum(abs.(M * x) .^ 2)
+        @test hessian(f, [1, 1]) ≈ 2 .* (M' * M)
+    end
     
     include("broadcast_test.jl")
     include("array_operator_test.jl")

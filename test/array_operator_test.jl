@@ -55,6 +55,11 @@ using FillArrays
         @test t * [1, 0, 0] == ArrayOperator{1}([1,4,7])
         @test [1 0 0] * t == ArrayOperator{1}([1 2 3])
 
+        left = ArrayOperator{1}([1 2; 3 4])
+        right = ArrayOperator{2}(ones(2,2,2))
+        expected = cat((left.data * right.data[:, :, k] for k in axes(right.data, 3))..., dims=3)
+        @test left * right == ArrayOperator{2}(expected)
+
         @test t * 2 == ArrayOperator{1}([2 4 6;8 10 12;14 16 18])
         @test 2 * t == ArrayOperator{1}([2 4 6;8 10 12;14 16 18])
 
@@ -74,5 +79,14 @@ using FillArrays
         b = ArrayOperator{1}(zeros(3))
         b .= a .* 3
         @test b == ArrayOperator{1}(OneElement(3, 1, 3))
+    end
+
+    @testset "Arithmetic with BandedMatrix" begin
+        bm1 = BandedMatrix(0 => [1, 2, 3], 1 => [1, 1], -1 => [1, 1])
+        bm2 = BandedMatrix(0 => [4, 5, 6], 1 => [1, 1], -1 => [1, 1])
+        a = ArrayOperator{1}(bm1)
+        b = ArrayOperator{1}(bm2)
+        @test (a .+ b).data == bm1 .+ bm2
+        @test (a .+ b).data isa BandedMatrix
     end
 end
