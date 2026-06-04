@@ -65,7 +65,7 @@ gradient = result.value.partials
 # equivalent to c
 gradient2 = result.partials.value
 # equivalent to d
-hessian = result.partials.jacobian.data
+_hessian = result.partials.jacobian.data
 
 # We expect this to be 6
 print("Value: ", value, "\n")
@@ -74,5 +74,5 @@ print("Gradient: ", gradient, "\n")
 # We expect this to be the same
 print("Gradient: ", gradient2, "\n")
 # We expect this to be [0 1; 1 0]
-print("Hessian: ", hessian, "\n")
+print("Hessian: ", _hessian, "\n")
 
