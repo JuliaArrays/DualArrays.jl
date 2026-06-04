@@ -84,17 +84,12 @@ Base.BroadcastStyle(::Type{<:ArrayOperator{N, <:Any, <:Any, L}}) where {L, N} = 
 function Base.BroadcastStyle(s::ArrayOperatorBroadcastStyle{L, N}, ::Broadcast.DefaultArrayStyle{M}) where {L, N, M}
     L >= M ? s : throw(ArgumentError("Array has higher dimensionality than ArrayOperator"))
 end
-function Base.BroadcastStyle(s::ArrayOperatorBroadcastStyle{L, N}, ::S) where {L, N, M, S <: Broadcast.AbstractArrayStyle{M}}
-    L >= M ? s : throw(ArgumentError("Array has higher dimensionality than ArrayOperator"))
-end
 Base.BroadcastStyle(s::Broadcast.AbstractArrayStyle, t::ArrayOperatorBroadcastStyle) = Base.BroadcastStyle(t, s)
 function Base.BroadcastStyle(s1::ArrayOperatorBroadcastStyle{L1, N1}, s2::ArrayOperatorBroadcastStyle{L2, N2}) where {L1, N1, L2, N2}
     if L1 > L2
         s1
     elseif L2 > L1
         s2
-    elseif N1 == N2
-        s1
     else
         throw(ArgumentError("Ambiguous output dimension for resulting ArrayOperator"))
     end
@@ -258,8 +253,6 @@ end
 function DualMatrix(value::AbstractMatrix{S}, jacobian::AbstractArray{T, N}) where {S, T, N}
     DualMatrix(value, ArrayOperator{2}(jacobian))
 end
-
-_wrap_dual_matrix(x::DualMatrix) = x
 
 # If we have a matrix of dual numbers, we construct it into a DualMatrix
 # This helps (for now) resolve issues surrounding broadcasting with ArrayOperator

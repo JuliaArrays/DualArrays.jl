@@ -51,7 +51,7 @@ end
 function plot_solution(save=undef, n = 40, ps = [2.0, 2.25, 2.5, 2.75, 3.0])
     plt = plot()
     for p in ps
-        xs, u = solve(; n, p)
+        xs, u = solve(n, p)
         plot!(plt, xs, u, label = "Newton (DualArrays), p = $p", lw = 2)
         plot!(plt, xs, exact(xs, p), label = "Exact, p = $p", lw = 2, ls = :dash)
     end

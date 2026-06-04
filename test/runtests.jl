@@ -117,6 +117,12 @@ using DualArrays: ArrayOperator
         d = DualVector([2, 3], [4 5; 6 7])
         @test M * d isa DualVector
         @test M * d == DualVector([5,5],[10 12;10 12])
+
+        L = BandedMatrix([2 0; 0 3], (0, 0))
+        @test L * d == DualVector([4, 9], [8 10; 18 21])
+
+        dm = DualMatrix([1 2; 3 4], cat([1 3; 2 4], [5 7; 6 8]; dims=3))
+        @test L * dm == DualMatrix([2 4; 9 12], cat([2 6; 6 12], [10 14; 18 24]; dims=3))
     end
     @testset "vcat" begin
         x = Dual(1, [1, 2, 3])

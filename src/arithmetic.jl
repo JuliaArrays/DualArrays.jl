@@ -103,10 +103,8 @@ end
 
 # Necessary for promotion between Dual and Real numbers.
 Base.signbit(x::Dual) = signbit(x.value)
-Base.zero(x::Dual) = Dual(zero(x.value), zero(x.partials))
 Base.one(x::Dual) = Dual(one(x.value), zero(x.partials))
 
-Base.:^(x::Dual, y::Integer) = Dual(x.value ^ y, y * x.value^(y - 1) * x.partials)
 Base.broadcasted(::typeof(^), x::DualVector, y::Integer) = DualVector(x.value .^ y, y * x.value .^ (y - 1) .* x.jacobian)
 Base.broadcasted(::typeof(Base.literal_pow), ::typeof(^), x::DualVector, ::Val{y}) where y = DualVector(x.value .^ y, y * x.value .^ (y - 1) .* x.jacobian)
 Base.literal_pow(::typeof(^), x::Dual, ::Val{y}) where y = Dual(x.value ^ y, y * x.value^(y - 1) * x.partials)
