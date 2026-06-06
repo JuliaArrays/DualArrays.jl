@@ -13,11 +13,11 @@ Differentiation rules are mostly provided by ChainRules.jl.
 """
 module DualArrays
 
-export DualVector, DualMatrix, Dual, jacobian, ArrayOperator
+export DualVector, DualMatrix, Dual, jacobian, ArrayOperator, hessian
 
 import Base: +, -, ==, getindex, size, axes, broadcasted, show, sum, vcat, convert, *, isapprox, \, eltype, transpose, permutedims
 
-using LinearAlgebra, ArrayLayouts, FillArrays, DiffRules, TensorOperations
+using LinearAlgebra, ArrayLayouts, FillArrays, DiffRules, TensorOperations, SparseArrayKit
 
 import FillArrays: elconvert
 

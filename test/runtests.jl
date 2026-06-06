@@ -117,6 +117,12 @@ using DualArrays: ArrayOperator
         d = DualVector([2, 3], [4 5; 6 7])
         @test M * d isa DualVector
         @test M * d == DualVector([5,5],[10 12;10 12])
+
+        L = BandedMatrix([2 0; 0 3], (0, 0))
+        @test L * d == DualVector([4, 9], [8 10; 18 21])
+
+        dm = DualMatrix([1 2; 3 4], cat([1 3; 2 4], [5 7; 6 8]; dims=3))
+        @test L * dm == DualMatrix([2 4; 9 12], cat([2 6; 6 12], [10 14; 18 24]; dims=3))
     end
     @testset "vcat" begin
         x = Dual(1, [1, 2, 3])
@@ -147,6 +153,17 @@ using DualArrays: ArrayOperator
 
         @test d2[1].value == Dual(2, [1, 0])
         @test d2[1].partials == DualVector([1.0, 0], zeros(2, 2))
+    end
+
+    @testset "Hessian" begin
+        M = [1 1; 1 1]
+        dm = DualMatrix([1 2;3 4], zeros(2, 2, 2))
+
+        @test transpose(dm) isa DualMatrix
+        @test transpose(dm) * [2, -1] == DualVector([-1, 0], zeros(2, 2))
+
+        f(x) = sum(abs.(M * x) .^ 2)
+        @test hessian(f, [1, 1]) ≈ 2 .* (M' * M)
     end
     
     include("broadcast_test.jl")

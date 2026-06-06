@@ -10,9 +10,9 @@ for op in (:+, :-)
     @eval $op(x::AbstractVector, y::DualVector) = DualVector($op(x, y.value), y.jacobian)
 end
 
-
 # Matrix multiplication with a DualVector.
 *(x::AbstractMatrix, y::DualVector) = DualVector(x * y.value, x * y.jacobian)
+*(x::LayoutMatrix, y::DualVector) = DualVector(x * y.value, x * y.jacobian)
 
 ###
 # this section attempts to define broadcasting rules on DualVectors for functions
@@ -101,8 +101,10 @@ for (_, f, n) in DiffRules.diffrules(filter_modules=(:Base,))
     end
 end
 
-# Special cases: integer powers
-Base.:^(x::Dual, y::Integer) = Dual(x.value ^ y, y * x.value^(y - 1) * x.partials)
+# Necessary for promotion between Dual and Real numbers.
+Base.signbit(x::Dual) = signbit(x.value)
+Base.one(x::Dual) = Dual(one(x.value), zero(x.partials))
+
 Base.broadcasted(::typeof(^), x::DualVector, y::Integer) = DualVector(x.value .^ y, y * x.value .^ (y - 1) .* x.jacobian)
 Base.broadcasted(::typeof(Base.literal_pow), ::typeof(^), x::DualVector, ::Val{y}) where y = DualVector(x.value .^ y, y * x.value .^ (y - 1) .* x.jacobian)
 Base.literal_pow(::typeof(^), x::Dual, ::Val{y}) where y = Dual(x.value ^ y, y * x.value^(y - 1) * x.partials)
@@ -122,9 +124,10 @@ Multiplication (*) for ArrayOperators generalises from matrix/vector
 multiplication and uses tensor contraction provided by
 TensorOperations.jl. Let an (A, B) ArrayOperator denote
 an ArrayOperator with output dimension A and input dimension B
-(i.e an ArrayOperator{A+B, T, A, B} for some type T). We only
-allow multiplication between an (A, B) ArrayOperator and a (B, C)
-ArrayOperator, with the result being an (A, C) ArrayOperator.
+(i.e an ArrayOperator{A+B, T, A, B} for some type T). For multiplication
+between an (A, B) ArrayOperator and a (C, D) ArrayOperator, we sum over the
+leading B dimensions of the left ArrayOperator with the leading B dimensions
+of the right ArrayOperator. This returns an (A + C - B, D) ArrayOperator.
 This generalises from:
 
 - An inner product: a row vector * a column vector -> a scalar:
@@ -152,8 +155,8 @@ function _contract(x, y, A, B, C)
 end
 
 
-function *(x::ArrayOperator{A, B}, y::ArrayOperator{B, C}) where {A, B, C}
-    return ArrayOperator{A}(_contract(x.data, y.data, A, B, C))
+function *(x::ArrayOperator{A, B}, y::ArrayOperator{C, D}) where {A, B, C, D}
+    return ArrayOperator{A + C - B}(_contract(x.data, y.data, A, B, C + D - B))
 end
 
 function *(x::ArrayOperator{A, B}, y::AbstractArray{<:Any, L}) where {A, B, L}
@@ -166,13 +169,28 @@ function *(x::AbstractArray{<:Any, L}, y::ArrayOperator{B, C}) where {L, B, C}
     return ArrayOperator{A}(_contract(x, y.data, A, B, C))
 end
 
+# Matrix overrides to avoid contract and preserve sparsity
+*(x::ArrayOperator{1, 1}, y::ArrayOperator{1, C}) where {C} = ArrayOperator{1}(x.data * y.data)
+*(x::ArrayOperator{1, 1}, y::AbstractVecOrMat) = ArrayOperator{1}(x.data * y)
+*(x::AbstractMatrix, y::ArrayOperator{1, C}) where {C} = ArrayOperator{1}(x * y.data)
+
+transpose(x::DualMatrix) = DualMatrix(
+    transpose(x.value),
+    ArrayOperator{2}(permutedims(x.jacobian.data, (2, 1, ntuple(i -> i + 2, ndims(x.jacobian.data) - 2)...))),
+)
+
+function *(x::DualMatrix, y::AbstractVector)
+    jac = _contract(permutedims(x.jacobian.data, (1, 3, 2)), y, 2, 1, 0)
+    DualVector(x.value * y, jac)
+end
+
+*(x::AbstractMatrix, y::DualMatrix) = DualArray(x * y.value, ArrayOperator{1}(x) * y.jacobian)
+*(x::LayoutMatrix, y::DualMatrix) = DualArray(x * y.value, ArrayOperator{1}(x) * y.jacobian)
+
 # Extra required arithmetic for ArrayOperators
 Base.:+(x::ArrayOperator, y::ArrayOperator) = x .+ y
 Base.:-(x::ArrayOperator, y::ArrayOperator) = x .- y
 Base.:-(x::ArrayOperator) = (-).(x)
 
-Base.:*(a::Number, t::ArrayOperator{N, M, T, L}) where {N, M, T, L} =
-    ArrayOperator{N, M, promote_type(typeof(a), T), L}(a .* t.data)
+Base.:*(a::Number, t::ArrayOperator{N, M, T, L}) where {N, M, T, L} = ArrayOperator{N}(a .* t.data)
 Base.:*(t::ArrayOperator, a::Number) = a * t
-
-

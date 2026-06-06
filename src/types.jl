@@ -24,17 +24,17 @@ a + Jϵ
 Where a is an N-array of real numbers, J is an N+M=tensor and ϵ is an M-array of dual parts.
 In the simplest case, where N = 0, we have a Dual number with dual parts arranged in an M-array.
 """
-struct ArrayOperator{N, M, T, L}
-    data::AbstractArray{T, L}
+struct ArrayOperator{N, M, T, L, A <: AbstractArray{T, L}}
+    data::A
 end
 
 # Constructor to wrap an array with a tensor, given a contraction rule represented by N
 function ArrayOperator{N}(data::AbstractArray{T, L}) where {L, T, N}
-    ArrayOperator{N, L - N, T, L}(data)
+    ArrayOperator{N, L - N, T, L, typeof(data)}(data)
 end
 
 # Helper convert function
-elconvert(::Type{T}, t::ArrayOperator{N, M, S, L}) where {T, N, M, S, L} = ArrayOperator{N, M, T, L}(elconvert(T, t.data))
+elconvert(::Type{T}, t::ArrayOperator{N, M, S, L, A}) where {T, N, M, S, L, A} = ArrayOperator{N, M, T, L, typeof(elconvert(T, t.data))}(elconvert(T, t.data))
 
 # Basic array interface
 for op in (:size, :axes, :iterate)
@@ -81,20 +81,15 @@ as extra information.
 struct ArrayOperatorBroadcastStyle{L, N} <: Broadcast.AbstractArrayStyle{L} end
 
 Base.BroadcastStyle(::Type{<:ArrayOperator{N, <:Any, <:Any, L}}) where {L, N} = ArrayOperatorBroadcastStyle{L, N}()
-function Base.BroadcastStyle(::ArrayOperatorBroadcastStyle{L, N}, ::Broadcast.DefaultArrayStyle{M}) where {L, N, M}
-    # Julia optimises these checks at compile time.
-    if L >= M
-        ArrayOperatorBroadcastStyle{L, N}()
-    else
-        throw(ArgumentError("Ambiguous output dimension for resulting ArrayOperator"))
-    end
+function Base.BroadcastStyle(s::ArrayOperatorBroadcastStyle{L, N}, ::Broadcast.DefaultArrayStyle{M}) where {L, N, M}
+    L >= M ? s : throw(ArgumentError("Array has higher dimensionality than ArrayOperator"))
 end
-Base.BroadcastStyle(a::Broadcast.DefaultArrayStyle{M}, b::ArrayOperatorBroadcastStyle{L, N}) where {L, N, M} = Base.BroadcastStyle(b, a)
-function Base.BroadcastStyle(::ArrayOperatorBroadcastStyle{L1, N1},::ArrayOperatorBroadcastStyle{L2, N2}) where {L1, N1, L2, N2}
+Base.BroadcastStyle(s::Broadcast.AbstractArrayStyle, t::ArrayOperatorBroadcastStyle) = Base.BroadcastStyle(t, s)
+function Base.BroadcastStyle(s1::ArrayOperatorBroadcastStyle{L1, N1}, s2::ArrayOperatorBroadcastStyle{L2, N2}) where {L1, N1, L2, N2}
     if L1 > L2
-        ArrayOperatorBroadcastStyle{L1, N1}()
+        s1
     elseif L2 > L1
-        ArrayOperatorBroadcastStyle{L2, N2}()
+        s2
     else
         throw(ArgumentError("Ambiguous output dimension for resulting ArrayOperator"))
     end
@@ -103,30 +98,24 @@ end
 # Helper functions to help define broadcasting/arithmetic with ArrayOperators.
 # By converting a broadcast involving ArrayOperators into a broadcast
 # involving the underlying arrays.
-_unwrap(t::ArrayOperator) = t.data
-_unwrap(bc::Broadcast.Broadcasted) = Broadcast.Broadcasted(bc.f, _unwrap_args(bc.args), bc.axes)
-_unwrap(x) = x
-_unwrap_args(args::Tuple) = map(_unwrap, args)
+_wrap_dual_matrix(x) = x
+_unwrap_arg(t::ArrayOperator) = t.data
+_unwrap_arg(bc::Broadcast.Broadcasted{<:ArrayOperatorBroadcastStyle}) = _unwrap_arg(Broadcast.materialize(bc))
+_unwrap_arg(bc::Broadcast.Broadcasted) = Broadcast.materialize(bc)
+_unwrap_arg(x) = x
 
 # copy ensures that arithmetic involving a Tensor returns a Tensor
 function Base.copy(bc::Broadcast.Broadcasted{ArrayOperatorBroadcastStyle{L, N}}) where {L, N}
     # We create a Broadcasted of the underlying arrays and create a Tensor containing
     # the evaluated broadcast. We check if Base.broadcasted is a Broadcasted
     # or is overriden such as with DualArrays
-    databroadcast = Base.broadcasted(bc.f, _unwrap_args(bc.args)...)
-    result = databroadcast isa Broadcast.Broadcasted ? copy(Broadcast.flatten(databroadcast)) : databroadcast
-    ArrayOperator{N}(result)
+    ArrayOperator{N}(_wrap_dual_matrix(Broadcast.materialize(Broadcast.broadcasted(bc.f, map(_unwrap_arg, bc.args)...))))
 end
 
 # copyto adds support for .=
 function Base.copyto!(dest::ArrayOperator, bc::Broadcast.Broadcasted{ArrayOperatorBroadcastStyle{L, N}}) where {L, N}
     # As above
-    databroadcast = Base.broadcasted(bc.f, _unwrap_args(bc.args)...)
-    if databroadcast isa Broadcast.Broadcasted
-        copyto!(dest.data, Broadcast.flatten(databroadcast))
-    else
-        copyto!(dest.data, databroadcast)
-    end
+    copyto!(dest.data, Broadcast.broadcasted(bc.f, map(_unwrap_arg, bc.args)...))
     dest
 end
 
@@ -223,7 +212,8 @@ DualArray{T,N}(value, jacobian) where {T, N} = DualArray{T,N}(elconvert(T, value
 # Constructor that forces type compatibility
 function DualArray(value::AbstractArray, jacobian::ArrayOperator)
     T = promote_type(eltype(value), eltype(jacobian))
-    DualArray{T}(value, jacobian)
+    N = ndims(value)
+    DualArray{T,N}(value, jacobian)
 end
 
 # Helper function to define DualArrays with AbstractArray jacobians
@@ -264,6 +254,16 @@ function DualMatrix(value::AbstractMatrix{S}, jacobian::AbstractArray{T, N}) whe
     DualMatrix(value, ArrayOperator{2}(jacobian))
 end
 
+# If we have a matrix of dual numbers, we construct it into a DualMatrix
+# This helps (for now) resolve issues surrounding broadcasting with ArrayOperator
+# and DualMatrix nested (in 2nd order autodiff). A proper fix involves
+# redesigning the broadcasting of dual arrays.
+function _wrap_dual_matrix(x::AbstractMatrix{<:Dual})
+    npartials = length(first(x).partials)
+    partial_columns = reduce(hcat, vec(getfield.(x, :partials)))
+    partial_tensor = permutedims(reshape(partial_columns, npartials, size(x)...), (2, 3, 1))
+    DualMatrix(getfield.(x, :value), partial_tensor)
+end
 
 elconvert(::Type{Dual{T}}, a::DualVector) where {T} = DualVector(elconvert(T, a.value), elconvert(T, a.jacobian))
 elconvert(::Type{Dual{T}}, a::DualMatrix) where {T} = DualMatrix(elconvert(T, a.value), elconvert(T, a.jacobian))

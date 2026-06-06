@@ -12,7 +12,7 @@ using LinearAlgebra, DualArrays, Plots
 # Provided f ∈ L²(Ω), there exists a unique solution u ∈ H₀¹(Ω) to the boundary value problem.
 # A problem arises that given a desired solution d, we want to find f such that the solution u
 # is approximately d. An intuitive way of asking this is: "given that we want a certain temperature
-# field in a room, how do we heat or cool the walls?"
+# field in a room, how do we position heat sources/sinks?"
 #
 # A way of doing this is to define an objective to be minimised given by:
 #
@@ -79,7 +79,7 @@ function solve_1D(f0, d, h, kappa, alpha, iters = 30)
     K = (kappa / h ^ 2) * Tridiagonal(-ones(n - 1), 2 * ones(n), -ones(n - 1))
     for _ = 1:iters
         grads = grad_objective(K, DualVector(fvector, I(length(fvector))), d, alpha)
-        step = grads.jacobian \ grads.value
+        step = grads.jacobian.data \ grads.value
         fvector -= step 
     end
 
@@ -106,7 +106,7 @@ function solve_2D(x0, d, h, kappa, alpha, iters = 30)
     K = (kappa / h ^ 2) * (kron(I(n), T) + kron(T, I(n)))
     for _ = 1:iters
         grads = grad_objective(K, DualVector(fvector, I(length(fvector))), d, alpha)
-        step = grads.jacobian \ grads.value
+        step = grads.jacobian.data \ grads.value
         fvector -= step 
     end
 
@@ -115,7 +115,7 @@ end
 
 # Solve the 1D Poisson control on the unit interval and plot the solution.
 # We compare it to a known analytical solution.
-function plot_solution_1D()
+function plot_solution_1D(save=undef)
 
     # setup problem
     kappa = 1
@@ -132,13 +132,16 @@ function plot_solution_1D()
     fexact = coeff .* sin.(pi .* x[2:end-1])
 
     f = solve_1D(zeros(length(d)), d, h, kappa, alpha)
-    plot(x[2:end-1], f, label="Computed Solution")
-    plot!(x[2:end-1], fexact, label="Exact Solution")
+    plot(x[2:end-1], f, label="Computed Control", title="1D Poisson Control Solution")
+    plot!(x[2:end-1], fexact, label="Exact Control")
+    if save !== undef
+        savefig(save)
+    end
 end
     
 # Solve the 2D Poisson control on the unit square and plot the solution.
 # We compare it to a known analytical solution given in the dolfin-adjoint example.
-function plot_solution_2D()
+function plot_solution_2D(save=undef)
 
     # setup problem
     kappa = 1
@@ -164,5 +167,8 @@ function plot_solution_2D()
 
     p1 = heatmap(x, x, F, title="Computed Control", aspect_ratio=1)
     p2 = heatmap(x, x, fexact, title="Exact Control", aspect_ratio=1)
-    plot(p1, p2, layout=(1, 2), size=(900, 400))
+    plot(p1, p2, layout=(1, 2), size=(900, 400), plot_title="2D Poisson Control Solution", plot_titlevspan=0.12)
+    if save !== undef
+        savefig(save)
+    end
 end

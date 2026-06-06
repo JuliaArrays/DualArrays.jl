@@ -9,7 +9,7 @@
 #
 ###
 
-using DualArrays, ForwardDiff, Plots, BenchmarkTools
+using DualArrays, ForwardDiff, Plots, BenchmarkTools, BandedMatrices
 
 f(x) = sin.(x)
 
@@ -20,7 +20,7 @@ function plot_times()
 
     for n in ns
         println("Computing jacobian for n = $n")
-        push!(dualarray_times, @belapsed DualArrays.jacobian(f, rand($n)))
+        push!(dualarray_times, @belapsed DualArrays.jacobian(f, rand($n), BandedMatrix))
         push!(forwarddiff_times, @belapsed ForwardDiff.jacobian(f, rand($n)))
     end
 
