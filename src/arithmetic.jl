@@ -115,7 +115,16 @@ LinearAlgebra.dot(x::DualVector, y::AbstractVector) = Dual(dot(x.value, y), tran
 LinearAlgebra.dot(x::AbstractVector, y::DualVector) = Dual(dot(x, y.value), transpose(y.jacobian) * x)
 
 # solve
-\(x::AbstractMatrix, y::DualVector) = DualVector(x \ y.value, ArrayOperator{1}(x \ y.jacobian.data))
+function \(x::AbstractMatrix, y::DualVector)
+    DualVector(x \ y.value, ArrayOperator{1}(x \ y.jacobian.data))
+end
+
+function \(x::AbstractMatrix, y::DualMatrix)
+    jac = y.jacobian.data
+    reshaped = reshape(jac, size(jac, 1), :)
+    solved = x \ reshaped
+    DualMatrix(x \ y.value, ArrayOperator{2}(reshape(solved, size(jac))))
+end
 
 
 

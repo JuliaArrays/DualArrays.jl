@@ -78,6 +78,12 @@ function getindex(x::DualMatrix, y::Vararg{Union{Colon, UnitRange}})
     DualMatrix(newval, newjac)
 end
 
+function setindex!(x::DualVector, y::Number, i::Int)
+    x.value[i] = y
+    x.jacobian.data[i, :] .= 0
+    return x
+end
+
 # DualArray array interface
 for op in (:size, :axes)
     @eval $op(a::DualArray) = $op(a.value)

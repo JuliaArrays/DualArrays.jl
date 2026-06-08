@@ -15,7 +15,7 @@ module DualArrays
 
 export DualVector, DualMatrix, Dual, jacobian, ArrayOperator, hessian
 
-import Base: +, -, ==, getindex, size, axes, broadcasted, show, sum, vcat, convert, *, isapprox, \, eltype, transpose, permutedims
+import Base: +, -, ==, getindex, setindex!, size, axes, broadcasted, show, sum, vcat, convert, *, isapprox, \, eltype, transpose, permutedims
 
 using LinearAlgebra, ArrayLayouts, FillArrays, DiffRules, TensorOperations, SparseArrayKit
 
