@@ -112,6 +112,16 @@ using DualArrays: ArrayOperator
         @test A \ b == DualVector([1, 1], [1.5 2; 1.5 2])
     end
 
+    @testset "Solve (DualMatrix)" begin
+        A = [1 0;0 2]
+        dm = DualMatrix([1.0 2.0; 3.0 4.0], zeros(2, 2, 2))
+
+        res = A \ dm
+
+        @test res.value == A \ dm.value
+        @test res.jacobian.data == zeros(2, 2, 2)
+    end
+
     @testset "Matrix multiplication" begin
         M = [1 1; 1 1]
         d = DualVector([2, 3], [4 5; 6 7])

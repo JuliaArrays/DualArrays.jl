@@ -50,6 +50,18 @@ using LinearAlgebra, DualArrays, Plots
 # and this enables us to solve via newton's method.
 
 """
+This calculates the scalar objective
+
+    (1/2) * ||u - d||² + (alpha / 2) * ||f||²
+
+where u solves K * u = f.
+"""
+function objective(K, f, d, alpha, h)
+    u = K \ f
+    return (h / 2) * sum((u - d) .^ 2) + (alpha * h / 2) * sum(f .^ 2)
+end
+
+"""
 This calculates the gradient of the objective as detailed above.
 K: the discretised Laplacian
 f: the control variable
@@ -73,13 +85,20 @@ kappa: diffusivity constant
 alpha: regularisation parameter
 iters: number of iterations to run newton's method.
 """
-function solve_1D(f0, d, h, kappa, alpha, iters = 30)
+function solve_1D(f0, d, h, kappa, alpha, iters = 30; method = :adjoint)
     fvector = copy(f0)
     n = length(f0)
     K = (kappa / h ^ 2) * Tridiagonal(-ones(n - 1), 2 * ones(n), -ones(n - 1))
     for _ = 1:iters
-        grads = grad_objective(K, DualVector(fvector, I(length(fvector))), d, alpha)
-        step = grads.jacobian.data \ grads.value
+        gradient, hess = if method == :adjoint
+            grads = grad_objective(K, DualVector(fvector, I(length(fvector))), d, alpha)
+            (grads.value, grads.jacobian.data)
+        elseif method == :hessian
+            J = f -> objective(K, f, d, alpha, h)
+            gradient = J(DualVector(fvector, I(length(fvector)))).partials
+            (gradient, hessian(J, fvector))
+        end
+        step = hess \ gradient
         fvector -= step 
     end
 
@@ -97,7 +116,7 @@ kappa: diffusivity constant
 alpha: regularisation parameter
 iters: number of iterations to run newton's method.
 """
-function solve_2D(x0, d, h, kappa, alpha, iters = 30)
+function solve_2D(x0, d, h, kappa, alpha, iters = 30; method = :adjoint)
     fvector = copy(x0)
     n = isqrt(length(x0))
     T = Tridiagonal(-ones(n - 1), 2 * ones(n), -ones(n - 1))
@@ -105,8 +124,15 @@ function solve_2D(x0, d, h, kappa, alpha, iters = 30)
     # source: https://www.petercheng.me/blog/discrete-laplacian-matrix
     K = (kappa / h ^ 2) * (kron(I(n), T) + kron(T, I(n)))
     for _ = 1:iters
-        grads = grad_objective(K, DualVector(fvector, I(length(fvector))), d, alpha)
-        step = grads.jacobian.data \ grads.value
+        gradient, hess = if method == :adjoint
+            grads = grad_objective(K, DualVector(fvector, I(length(fvector))), d, alpha)
+            (grads.value, grads.jacobian.data)
+        elseif method == :hessian
+            J = f -> objective(K, f, d, alpha, h)
+            gradient = J(DualVector(fvector, I(length(fvector)))).partials
+            (gradient, hessian(J, fvector))
+        end
+        step = hess \ gradient
         fvector -= step 
     end
 
@@ -115,7 +141,7 @@ end
 
 # Solve the 1D Poisson control on the unit interval and plot the solution.
 # We compare it to a known analytical solution.
-function plot_solution_1D(save=undef)
+function plot_solution_1D(save=undef; method = :adjoint)
 
     # setup problem
     kappa = 1
@@ -131,17 +157,18 @@ function plot_solution_1D(save=undef)
     coeff = (kappa * pi^2) / (1 + alpha * kappa^2 * pi^4)
     fexact = coeff .* sin.(pi .* x[2:end-1])
 
-    f = solve_1D(zeros(length(d)), d, h, kappa, alpha)
-    plot(x[2:end-1], f, label="Computed Control", title="1D Poisson Control Solution")
-    plot!(x[2:end-1], fexact, label="Exact Control")
+    f = solve_1D(zeros(length(d)), d, h, kappa, alpha; method=method)
+    plt = plot(x[2:end-1], f, label="Computed Control ($(String(method)))", title="1D Poisson Control Solution")
+    plot!(plt, x[2:end-1], fexact, label="Exact Control")
+    display(plt)
     if save !== undef
-        savefig(save)
+        savefig(plt, save)
     end
 end
     
 # Solve the 2D Poisson control on the unit square and plot the solution.
 # We compare it to a known analytical solution given in the dolfin-adjoint example.
-function plot_solution_2D(save=undef)
+function plot_solution_2D(save=undef; method = :adjoint)
 
     # setup problem
     kappa = 1
@@ -162,13 +189,14 @@ function plot_solution_2D(save=undef)
     # analytical optimal control as specified in dolfin-adjoint
     fexact = (1 / (1 + 4 * alpha * pi^4)) .* sin.(pi .* X) .* sin.(pi .* Y)
 
-    f = solve_2D(zeros(n * n), vec(d), h, kappa, alpha)
+    f = solve_2D(zeros(n * n), vec(d), h, kappa, alpha; method=method)
     F = reshape(f, n, n)
 
-    p1 = heatmap(x, x, F, title="Computed Control", aspect_ratio=1)
+    p1 = heatmap(x, x, F, title="Computed Control ($(String(method)))", aspect_ratio=1)
     p2 = heatmap(x, x, fexact, title="Exact Control", aspect_ratio=1)
-    plot(p1, p2, layout=(1, 2), size=(900, 400), plot_title="2D Poisson Control Solution", plot_titlevspan=0.12)
+    plt = plot(p1, p2, layout=(1, 2), size=(900, 400), plot_title="2D Poisson Control Solution", plot_titlevspan=0.12)
+    display(plt)
     if save !== undef
-        savefig(save)
+        savefig(plt, save)
     end
 end

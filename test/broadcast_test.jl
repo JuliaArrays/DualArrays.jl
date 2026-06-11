@@ -72,3 +72,12 @@ using DualArrays, Test, SparseArrays, LinearAlgebra
     @test m.jacobian.data ≈ [3.0 2.0 3.0; 2.0 6.0 6.0; 3.0 6.0 11.0]
     @test div.jacobian.data ≈ [0.25 -0.5 -0.75; -0.5 -0.5 -1.5; -0.75 -1.5 -1.75]
 end
+
+@testset "DualVector setindex!" begin
+    x = DualVector([1, 2, 3], [1 0 0; 0 1 0; 0 0 1])
+
+    x[2] = 4
+
+    @test x.value == [1, 4, 3]
+    @test x.jacobian.data == [1 0 0; 0 0 0; 0 0 1]
+end
