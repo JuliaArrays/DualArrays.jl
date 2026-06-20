@@ -13,8 +13,8 @@ SparseArrayKit = "a9a3c162-d163-4c15-8926-b8794fbefed2"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 
-
 [compat]
+BandedMatrices = "1"
 DiffRules = "1.15.1"
 ForwardDiff = "1.2.2"
 Lux = "1.29.1"
